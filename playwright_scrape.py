@@ -18,6 +18,16 @@ def scrape_zip_versions(spec_url: str):
         page = browser.new_page()
         page.goto(spec_url, wait_until="networkidle")
 
+        # Extract specification number
+        spec_number = page.evaluate("""
+        () => {
+            const header = document.querySelector('#lblHeaderText');
+            if (!header) return '';
+            // header.textContent is like "Specification #: 21.111"
+            return header.textContent.split(':')[1].trim();
+        }
+        """)
+
         # Evaluate in-page JavaScript to collect {meeting, version, url} entries:
         data = page.evaluate("""
         () => {
@@ -29,13 +39,16 @@ def scrape_zip_versions(spec_url: str):
                 const row = link.closest('tr');
                 const meetingCell = row && row.querySelector('td:nth-child(1)');
                 const meeting = meetingCell ? meetingCell.textContent.trim() : '';
-                return { meeting, version, url };
+                const linkCell = link.closest('td');
+                const dateCell = linkCell ? linkCell.nextElementSibling : null;
+                const upload_date = dateCell ? dateCell.textContent.trim() : '';
+                return { meeting, version, url, upload_date };
             });
         }
-        """)  # uses page.evaluate to run arbitrary JS in page context  [oai_citation_attribution:8‡Playwright](https://playwright.dev/python/docs/api/class-page?utm_source=chatgpt.com)
+        """)
 
         browser.close()
-        return data
+        return spec_number, data
 
 def main():
     parser = argparse.ArgumentParser(
@@ -54,13 +67,22 @@ def main():
     output_dir = os.path.join("output", spec_id)
     os.makedirs(output_dir, exist_ok=True)
 
-    # Scrape the data
-    results = scrape_zip_versions(args.url)
-    
-    # Save results to JSON file
-    output_file = os.path.join(output_dir, f"spec_{spec_id}.json")
+    # Scrape the data (now returns spec_number, results)
+    spec_number, results = scrape_zip_versions(args.url)
+
+    # Create output structure with spec_id and versions
+    output_data = {
+        "spec_id": spec_number,
+        "versions": results
+    }
+
+    # Use spec_number for output folder
+    output_dir = os.path.join("output", spec_number)
+    os.makedirs(output_dir, exist_ok=True)
+    output_file = os.path.join(output_dir, f"spec_{spec_number}.json")
+
     with open(output_file, 'w') as f:
-        json.dump(results, f, indent=2)
+        json.dump(output_data, f, indent=2)
     
     print(f"Results saved to: {output_file}")
 
