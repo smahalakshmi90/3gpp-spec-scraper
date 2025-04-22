@@ -57,7 +57,8 @@ def main():
     parser.add_argument(
         "url",
         nargs="?",
-        default="https://portal.3gpp.org/desktopmodules/Specifications/SpecificationDetails.aspx?specificationId=548",
+        #default="https://portal.3gpp.org/desktopmodules/Specifications/SpecificationDetails.aspx?specificationId=548",
+        default="https://portal.3gpp.org/desktopmodules/Specifications/SpecificationDetails.aspx?specificationId=545",
         help="Specification details URL (e.g. https://portal.3gpp.org/...specificationId=548)"
     )
     args = parser.parse_args()
